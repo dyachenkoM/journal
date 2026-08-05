@@ -1,0 +1,38 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    environment:
+      JOURNAL_DB_PATH: /data/journal.db
+    volumes:
+      - journal-data:/data
+    expose:
+      - "8000"
+
+  backup:
+    build: .
+    restart: unless-stopped
+    entrypoint: []
+    command: ["python", "scripts/backup.py"]
+    environment:
+      JOURNAL_DB_PATH: /data/journal.db
+      JOURNAL_BACKUP_DIR: /backups
+    volumes:
+      - journal-data:/data
+      - ./backups:/backups
+    depends_on:
+      - app
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./app/static:/usr/share/nginx/html/static:ro
+    depends_on:
+      - app
+
+volumes:
+  journal-data:
