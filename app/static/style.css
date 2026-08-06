@@ -563,6 +563,7 @@ table.rounds td.unit-name { padding: 8px 8px 8px 20px; font-size: 0.9rem; }
     padding: 0 1.5mm;
 }
 .p-scope .p-sig-name { flex: 1; }
+.p-scope .p-sig-autograph { min-width: 10mm; }
 .p-scope .p-sig-time { background: #ffff99; }
 
 /* ---------- Неисправности ---------- */

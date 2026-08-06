@@ -1801,6 +1801,7 @@ function printSignature(label, name, date) {
     return el("div", { class: "p-sig" },
         el("span", { class: "p-sig-label" }, label),
         el("span", { class: "p-sig-line p-sig-name" }, name || NBSP),
+        el("span", { class: "p-sig-line p-sig-autograph" }, NBSP),
         el("span", { class: "p-sig-cap" }, "Дата"),
         el("span", { class: "p-sig-line" }, date),
         el("span", { class: "p-sig-cap" }, "Время"),
