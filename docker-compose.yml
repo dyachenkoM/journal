@@ -13,7 +13,7 @@ services:
     build: .
     restart: unless-stopped
     entrypoint: []
-    command: ["python", "scripts/backup.py"]
+    command: ["python", "-m", "scripts.backup"]
     environment:
       JOURNAL_DB_PATH: /data/journal.db
       JOURNAL_BACKUP_DIR: /backups
