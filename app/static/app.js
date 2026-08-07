@@ -22,13 +22,13 @@ function designationFor(iso, shiftType) {
     return DESIGNATIONS[((days + offset) % 4 + 4) % 4];
 }
 
-// Группа обхода (1–8) для смены. Цикл 8 дней, каждый день группа сдвигается
-// на одну; у дневных и ночных смен свои смещения, поэтому у соседних смен
-// группы всегда разные. Опорная дата 13.07.2026: в день — группа 6, в ночь — 4.
+// Группа обхода (1–8) для смены. Цикл 8 дней; смена обходит одну группу за
+// пару «день даты N + ночь даты N+1», поэтому ночное смещение на 1 меньше
+// дневного. Опорная дата 13.07.2026: в день — группа 6, в ночь — 5.
 function roundGroupFor(iso, shiftType) {
     const [y, m, d] = iso.split("-").map(Number);
     const days = Math.round((Date.UTC(y, m - 1, d) - ROTATION_EPOCH) / 86400000);
-    const offset = shiftType === "day" ? 5 : 3;
+    const offset = shiftType === "day" ? 5 : 4;
     return ((days + offset) % 8 + 8) % 8 + 1;
 }
 
