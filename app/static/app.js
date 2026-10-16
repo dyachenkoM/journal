@@ -101,6 +101,7 @@ async function api(url, options = {}) {
 // ---------- Вход ----------
 
 function renderLogin() {
+    leaveGuard = null;
     const loginInput = el("input", { type: "text", placeholder: "Имя пользователя",
         autocomplete: "username" });
     const passInput = el("input", { type: "password", placeholder: "Пароль",
@@ -168,6 +169,7 @@ function route() {
     }
     // Страница отчёта растягивается на широкие (16:9) экраны
     app.classList.toggle("wide", /^#\/shift\//.test(hash));
+    leaveGuard = null;
     let m;
     if ((m = hash.match(/^#\/shift\/(\d{4}-\d{2}-\d{2})\/(day|night)$/))) {
         renderReport(m[1], m[2]);
@@ -191,7 +193,48 @@ function route() {
         renderCalendar(new Date().getFullYear());
     }
 }
-window.addEventListener("hashchange", route);
+// Защита от ухода со страницы с несохранёнными изменениями:
+// { hash, isDirty(), save() → Promise<boolean> } или null
+let leaveGuard = null;
+
+window.addEventListener("hashchange", () => {
+    if (leaveGuard && location.hash !== leaveGuard.hash && leaveGuard.isDirty()) {
+        const target = location.hash || "#/";
+        // Возвращаем адрес страницы без повторной отрисовки (pushState не вызывает hashchange)
+        history.pushState(null, "", leaveGuard.hash);
+        confirmLeave(leaveGuard, target);
+        return;
+    }
+    route();
+});
+
+window.addEventListener("beforeunload", (e) => {
+    if (leaveGuard && location.hash === leaveGuard.hash && leaveGuard.isDirty()) {
+        e.preventDefault();
+        e.returnValue = "";
+    }
+});
+
+function confirmLeave(guard, target) {
+    if (document.querySelector(".modal-overlay.leave-confirm")) return;
+    const close = () => overlay.remove();
+    const go = () => { close(); leaveGuard = null; location.hash = target; };
+    const overlay = el("div", { class: "modal-overlay leave-confirm", onclick: (e) => {
+        if (e.target === overlay) close();
+    }});
+    overlay.append(el("div", { class: "modal" },
+        el("h2", {}, "Сохранить изменения в отчёте?"),
+        el("div", { class: "shift-buttons" },
+            el("button", { class: "btn primary", onclick: async () => {
+                close();
+                if (await guard.save()) go();
+            } }, "Сохранить"),
+            el("button", { class: "btn danger", onclick: go }, "Не сохранять"),
+        ),
+        el("button", { class: "close-btn", onclick: close }, "Отмена"),
+    ));
+    document.body.append(overlay);
+}
 
 // ---------- Календарь ----------
 
@@ -1236,16 +1279,17 @@ async function renderReport(iso, shiftType) {
     async function save() {
         if (document.querySelector("input.invalid")) {
             toast(`Есть время вне пределов смены (${SHIFT_TIMES[shiftType][0]}–${SHIFT_TIMES[shiftType][1]}) — исправьте выделенные поля`, true);
-            return;
+            return false;
         }
         try {
-            await api(`/api/shifts/${iso}/${shiftType}`, {
-                method: "PUT",
-                body: JSON.stringify(data),
-            });
+            const body = JSON.stringify(data);
+            await api(`/api/shifts/${iso}/${shiftType}`, { method: "PUT", body });
+            savedState = body;
             toast("Отчёт сохранён");
+            return true;
         } catch (e) {
             toast(e.message, true);
+            return false;
         }
     }
 
@@ -1254,6 +1298,7 @@ async function renderReport(iso, shiftType) {
         try {
             await api(`/api/shifts/${iso}/${shiftType}`, { method: "DELETE" });
             toast("Отчёт удалён");
+            leaveGuard = null;
             location.hash = `#/calendar/${iso.slice(0, 4)}`;
         } catch (e) {
             toast(e.message, true);
@@ -1287,6 +1332,13 @@ async function renderReport(iso, shiftType) {
             el("button", { class: "btn primary", onclick: save }, "Сохранить отчёт"),
         ),
     );
+
+    // Изменения отслеживаем сравнением с состоянием на момент загрузки/сохранения
+    let savedState = JSON.stringify(data);
+    const pageHash = `#/shift/${iso}/${shiftType}`;
+    if (location.hash === pageHash) {
+        leaveGuard = { hash: pageHash, isDirty: () => JSON.stringify(data) !== savedState, save };
+    }
 }
 
 // ---------- Конструктор макета печати ----------
