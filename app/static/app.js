@@ -1305,7 +1305,16 @@ async function renderReport(iso, shiftType) {
         }
     }
 
+    // Переход к соседней смене; несохранённые изменения перехватит leaveGuard
+    const shiftNavButton = (step) => {
+        const [navIso, navType] = adjacentShift(iso, shiftType, step);
+        const label = `${fmtDot(navIso)}, ${navType === "day" ? "день" : "ночь"}`;
+        return el("button", { class: "btn", onclick: () => location.hash = `#/shift/${navIso}/${navType}` },
+            step < 0 ? `← Предыдущая смена (${label})` : `Следующая смена (${label}) →`);
+    };
+
     app.replaceChildren(
+        el("div", { class: "shift-nav" }, shiftNavButton(-1), shiftNavButton(1)),
         el("div", { class: "report-header" },
             el("div", { class: "report-title" },
                 `Отчёт за ${fmtDate(iso)}`,
@@ -1822,6 +1831,15 @@ function fmtDot(iso) {
 function isoPlusDays(iso, days) {
     const [y, m, d] = iso.split("-").map(Number);
     return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+}
+
+// Соседняя смена по графику: за дневной идёт ночная того же дня,
+// за ночной — дневная следующего дня
+function adjacentShift(iso, shiftType, step) {
+    if (step < 0) {
+        return shiftType === "day" ? [isoPlusDays(iso, -1), "night"] : [iso, "day"];
+    }
+    return shiftType === "day" ? [iso, "night"] : [isoPlusDays(iso, 1), "day"];
 }
 
 // Дата передачи смены — дата её окончания: ночная заканчивается утром следующего дня
