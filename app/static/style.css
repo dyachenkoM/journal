@@ -180,7 +180,8 @@ h1 { font-size: 1.5rem; margin-bottom: 16px; }
     justify-content: space-between;
     flex-wrap: wrap;
     gap: 10px;
-    margin-bottom: 12px;
+    /* Сразу под шапкой отчёта: забираем часть её нижнего отступа */
+    margin: -8px 0 18px;
 }
 .report-title { font-size: 1.3rem; font-weight: 700; }
 .report-title .badge {

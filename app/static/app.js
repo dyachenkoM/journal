@@ -1308,13 +1308,11 @@ async function renderReport(iso, shiftType) {
     // Переход к соседней смене; несохранённые изменения перехватит leaveGuard
     const shiftNavButton = (step) => {
         const [navIso, navType] = adjacentShift(iso, shiftType, step);
-        const label = `${fmtDot(navIso)}, ${navType === "day" ? "день" : "ночь"}`;
         return el("button", { class: "btn", onclick: () => location.hash = `#/shift/${navIso}/${navType}` },
-            step < 0 ? `← Предыдущая смена (${label})` : `Следующая смена (${label}) →`);
+            step < 0 ? "← Предыдущая смена" : "Следующая смена →");
     };
 
     app.replaceChildren(
-        el("div", { class: "shift-nav" }, shiftNavButton(-1), shiftNavButton(1)),
         el("div", { class: "report-header" },
             el("div", { class: "report-title" },
                 `Отчёт за ${fmtDate(iso)}`,
@@ -1326,6 +1324,7 @@ async function renderReport(iso, shiftType) {
                     "← К календарю"),
             ),
         ),
+        el("div", { class: "shift-nav" }, shiftNavButton(-1), shiftNavButton(1)),
         el("div", { class: "card" },
             el("h2", {}, "Данные смены"),
             el("div", { class: "form-grid" },
