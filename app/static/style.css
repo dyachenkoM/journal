@@ -590,6 +590,27 @@ table.rounds td.unit-name { padding: 8px 8px 8px 20px; font-size: 0.9rem; }
 .resolve-row { display: flex; gap: 4px; align-items: center; }
 .resolve-row input { min-width: 0; flex: 1; }
 
+/* ---------- Логи ---------- */
+.log-view {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 0.8rem;
+    max-height: 70vh;
+    overflow: auto;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin-top: 8px;
+}
+.log-entry {
+    white-space: pre-wrap;
+    word-break: break-word;
+    padding: 3px 8px;
+    border-bottom: 1px solid #eef1f5;
+}
+.log-entry:last-child { border-bottom: none; }
+.log-entry.level-warning { background: #fff8e6; }
+.log-entry.level-error, .log-entry.level-critical { background: #fdeaea; color: #8a1c1c; }
+a.btn { text-decoration: none; color: inherit; display: inline-flex; align-items: center; }
+
 @media print {
     /* Нулевые поля страницы отключают колонтитулы браузера (URL, дата,
        заголовок, номера страниц); отступы задаются позициями блоков в макете */

@@ -5,6 +5,7 @@ from app.api.v1 import (
     area_route,
     auth_route,
     control_route,
+    log_route,
     malfunction_route,
     print_layout_route,
     round_group_route,
@@ -24,4 +25,5 @@ _protected.include_router(print_layout_route.router)
 _protected.include_router(round_group_route.router)
 _protected.include_router(shift_route.router)
 _protected.include_router(user_route.router)
+_protected.include_router(log_route.router)
 api_router.include_router(_protected)

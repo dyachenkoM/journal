@@ -162,7 +162,7 @@ function route() {
     }
     let hash = location.hash || "#/";
     // Страницы настройки справочников доступны только администраторам
-    const adminOnly = ["#/controls", "#/areas", "#/round-groups", "#/print-layout", "#/users"];
+    const adminOnly = ["#/controls", "#/areas", "#/round-groups", "#/print-layout", "#/users", "#/logs"];
     if (adminOnly.includes(hash) && !currentUser.is_admin) {
         hash = "#/";
         location.hash = "";
@@ -187,6 +187,8 @@ function route() {
         renderPrintLayout();
     } else if (hash === "#/users") {
         renderUsers();
+    } else if (hash === "#/logs") {
+        renderLogs();
     } else if (hash === "#/search") {
         renderSearch();
     } else {
@@ -267,6 +269,7 @@ async function renderCalendar(year) {
                     el("button", { class: "btn", onclick: () => location.hash = "#/round-groups" }, "Группы обхода"),
                     el("button", { class: "btn", onclick: () => location.hash = "#/print-layout" }, "Макет печати"),
                     el("button", { class: "btn", onclick: () => location.hash = "#/users" }, "Пользователи"),
+                    el("button", { class: "btn", onclick: () => location.hash = "#/logs" }, "Логи"),
                 ] : []),
                 el("span", { class: "user-badge" }, currentUser?.username || ""),
                 el("button", { class: "btn", onclick: logout, title: "Выйти из учётной записи" }, "Выйти"),
@@ -537,6 +540,100 @@ async function renderUsers() {
         el("p", { class: "empty-hint" },
             "Администраторы управляют учётными записями; остальные пользователи работают с журналом."),
     );
+}
+
+// ---------- Логи (только администраторы) ----------
+
+function fmtSize(bytes) {
+    if (bytes < 1024) return `${bytes} Б`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} КБ`;
+    return `${(bytes / 1024 / 1024).toFixed(1)} МБ`;
+}
+
+async function renderLogs() {
+    app.replaceChildren(el("p", { class: "empty-hint" }, "Загрузка…"));
+    let files = [];
+    try {
+        files = await api("/api/logs") || [];
+    } catch (e) {
+        toast(e.message, true);
+    }
+
+    const header = el("div", { class: "report-header" },
+        el("h1", {}, "Логи"),
+        el("button", { class: "btn", onclick: () => history.length > 1 ? history.back() : location.hash = "#/" },
+            "← Назад"),
+    );
+    if (!files.length) {
+        app.replaceChildren(header, el("div", { class: "card" },
+            el("p", { class: "empty-hint" }, "Файлов логов пока нет.")));
+        return;
+    }
+
+    const fileSelect = el("select", {}, files.map(f => el("option", { value: f.name },
+        `${f.name} — ${fmtSize(f.size)}, ${f.modified.replace("T", " ")}`)));
+    const levelSelect = el("select", {},
+        el("option", { value: "" }, "Все уровни"),
+        el("option", { value: "WARNING" }, "Предупреждения и ошибки"),
+        el("option", { value: "ERROR" }, "Только ошибки"),
+    );
+    const limitSelect = el("select", {},
+        [200, 500, 2000, 5000].map(n => el("option", { value: n, selected: n === 500 ? "" : null },
+            `Последние ${n}`)));
+    const wordInput = el("input", { type: "text", placeholder: "Поиск: пользователь, путь, текст ошибки" });
+    const downloadLink = el("a", { class: "btn", download: "" }, "Скачать файл");
+    const results = el("div", {});
+
+    async function load() {
+        const name = fileSelect.value;
+        downloadLink.href = `/api/logs/${encodeURIComponent(name)}/download`;
+        const params = new URLSearchParams({ limit: limitSelect.value });
+        if (levelSelect.value) params.set("level", levelSelect.value);
+        if (wordInput.value.trim()) params.set("query", wordInput.value.trim());
+        let data;
+        try {
+            data = await api(`/api/logs/${encodeURIComponent(name)}?${params}`);
+        } catch (e) {
+            toast(e.message, true);
+            return;
+        }
+        if (!data) {
+            results.replaceChildren(el("p", { class: "empty-hint" }, "Файл не найден — обновите страницу."));
+            return;
+        }
+        const summary = data.truncated
+            ? `Показаны последние ${data.entries.length} из ${data.matched} записей (свежие сверху)`
+            : `Записей: ${data.matched} (свежие сверху)`;
+        results.replaceChildren(el("div", { class: "card" },
+            el("p", { class: "empty-hint" }, summary),
+            data.entries.length
+                ? el("div", { class: "log-view" }, data.entries.map(e =>
+                    el("div", { class: `log-entry level-${e.level.toLowerCase()}` }, e.text)))
+                : el("p", { class: "empty-hint" }, "Ничего не найдено."),
+        ));
+    }
+    for (const control of [fileSelect, levelSelect, limitSelect]) {
+        control.addEventListener("change", load);
+    }
+    wordInput.addEventListener("keydown", (e) => { if (e.key === "Enter") load(); });
+
+    app.replaceChildren(
+        header,
+        el("div", { class: "card" },
+            el("div", { class: "form-grid" },
+                el("div", { class: "field" }, el("label", {}, "Файл"), fileSelect),
+                el("div", { class: "field" }, el("label", {}, "Уровень"), levelSelect),
+                el("div", { class: "field" }, el("label", {}, "Сколько показать"), limitSelect),
+            ),
+            el("div", { class: "field-row add-control full" },
+                wordInput,
+                el("button", { class: "btn primary", onclick: load }, "Обновить"),
+                downloadLink,
+            ),
+        ),
+        results,
+    );
+    load();
 }
 
 // ---------- Неисправности ----------
