@@ -1,7 +1,11 @@
+import logging
+
 from fastapi import HTTPException
 
 from app.repositories.shift_repository import ShiftRepository
 from app.schemas.shift_schema import ShiftReport
+
+log = logging.getLogger(__name__)
 
 
 def _check_shift_type(shift_type: str) -> None:
@@ -64,8 +68,10 @@ class ShiftService:
     def save_shift(self, date: str, shift_type: str, report: ShiftReport) -> None:
         _check_shift_type(shift_type)
         self._repo.upsert(date, shift_type, report)
+        log.info("Сохранена смена %s %s", date, shift_type)
 
     def delete_shift(self, date: str, shift_type: str) -> None:
         _check_shift_type(shift_type)
         if not self._repo.delete(date, shift_type):
             raise HTTPException(404, "Смена не найдена")
+        log.info("Удалена смена %s %s", date, shift_type)

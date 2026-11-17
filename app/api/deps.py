@@ -73,6 +73,8 @@ def get_current_user(request: Request, service: AuthServiceDep) -> dict:
     user = service.user_by_token(token) if token else None
     if user is None:
         raise HTTPException(401, "Требуется вход")
+    # Для журнала запросов (middleware в app/main.py)
+    request.state.user = user
     return user
 
 

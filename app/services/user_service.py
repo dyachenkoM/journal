@@ -1,8 +1,12 @@
+import logging
+
 from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 
 from app.core.security import hash_password
 from app.repositories.user_repository import UserRepository
+
+log = logging.getLogger(__name__)
 
 MIN_PASSWORD_LENGTH = 4
 
@@ -23,6 +27,7 @@ class UserService:
             user_id = self._repo.create(username, hash_password(password), is_admin)
         except IntegrityError:
             raise HTTPException(409, "Пользователь с таким именем уже есть")
+        log.info("Создан пользователь %s (admin=%s)", username, is_admin)
         return {"id": user_id, "username": username, "is_admin": is_admin}
 
     def set_password(self, user_id: int, password: str) -> None:
@@ -33,6 +38,7 @@ class UserService:
         user.password_hash = hash_password(password)
         # Смена пароля разрывает все активные сессии пользователя
         self._repo.delete_user_sessions(user_id)
+        log.info("Сменён пароль пользователя %s", user.username)
 
     def set_role(self, user_id: int, is_admin: bool) -> None:
         user = self._repo.get_by_id(user_id)
@@ -41,6 +47,7 @@ class UserService:
         if user.is_admin and not is_admin and self._repo.count_admins() <= 1:
             raise HTTPException(409, "Нельзя снять права у последнего администратора")
         user.is_admin = is_admin
+        log.info("Роль пользователя %s: admin=%s", user.username, is_admin)
 
     def delete_user(self, user_id: int, acting_user_id: int) -> None:
         if user_id == acting_user_id:
@@ -51,6 +58,7 @@ class UserService:
         if user.is_admin and self._repo.count_admins() <= 1:
             raise HTTPException(409, "Нельзя удалить последнего администратора")
         self._repo.delete(user_id)
+        log.info("Удалён пользователь %s", user.username)
 
 
 def _check_password(password: str) -> None:

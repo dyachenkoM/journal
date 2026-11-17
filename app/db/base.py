@@ -1,4 +1,6 @@
 """Создание схемы, миграции и начальные данные."""
+import logging
+
 from alembic import command
 from alembic.config import Config
 from sqlalchemy import Connection, inspect, select, text
@@ -8,6 +10,8 @@ from app.core.config import PROJECT_ROOT
 from app.core.security import hash_password
 from app.db.models import Base, RoundGroupArea, User
 from app.db.session import engine
+
+log = logging.getLogger(__name__)
 
 # Ревизия Alembic, соответствующая схеме на момент внедрения миграций
 BASELINE_REVISION = "0001"
@@ -74,7 +78,7 @@ def _seed_admin(session: Session) -> None:
     if session.scalar(select(User.id).limit(1)) is not None:
         return
     session.add(User(username="admin", password_hash=hash_password("admin"), is_admin=True))
-    print("Создан администратор по умолчанию (admin/admin) — смените пароль после входа!")
+    log.warning("Создан администратор по умолчанию (admin/admin) — смените пароль после входа!")
 
 
 def _migrate_control_rename(conn: Connection) -> None:

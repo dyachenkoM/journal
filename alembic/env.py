@@ -1,4 +1,5 @@
 """Окружение Alembic: использует движок и модели приложения."""
+import logging
 from logging.config import fileConfig
 
 from alembic import context
@@ -8,7 +9,10 @@ from app.db.session import engine
 
 config = context.config
 
-if config.config_file_name is not None:
+# Настройки логов из alembic.ini — только при запуске из консоли. Внутри
+# приложения (init_db) логирование уже настроено, а fileConfig сбросил бы
+# его обработчики и отключил логгеры приложения.
+if config.config_file_name is not None and not logging.getLogger().handlers:
     fileConfig(config.config_file_name)
 
 target_metadata = Base.metadata

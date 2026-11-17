@@ -13,13 +13,14 @@ from pathlib import Path
 
 from sqlalchemy import text
 
+from app.core.log_config import setup_logging
 from app.db.session import engine
 
 BACKUP_DIR = Path(os.environ.get("JOURNAL_BACKUP_DIR", "/backups"))
 INTERVAL = 7 * 24 * 3600  # раз в неделю
 KEEP = int(os.environ.get("JOURNAL_BACKUP_KEEP", "8"))  # ~2 месяца еженедельных копий
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+setup_logging("backup")
 log = logging.getLogger("backup")
 
 
